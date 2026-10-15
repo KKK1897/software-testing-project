@@ -1,0 +1,11 @@
+{
+  "note": "仅说明本机端口与凭据位置；实际配置由 scripts/init_local.py 生成，不把本文件当运行配置。",
+  "frontend_url": "http://127.0.0.1:3000",
+  "backend_url": "http://127.0.0.1:9999/jshERP-boot",
+  "mysql_host": "127.0.0.1",
+  "mysql_port": 13306,
+  "mysql_database": "jsh_erp_qa",
+  "db_password": "<初始化时生成，仅存runtime/local.json>",
+  "redis_port": 16379,
+  "redis_password": "<初始化时生成，仅存runtime/local.json>"
+}

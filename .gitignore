@@ -1,0 +1,32 @@
+# Local credentials and environments
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+config.local.json
+.venv/
+venv/
+.idea/
+.vscode/
+
+# Downloaded ERP, tools, databases and runtime credentials
+/upstream/
+/tools/
+/runtime/
+node_modules/
+
+# Uploads, generated documents, logs, traces and test artifacts
+artifacts/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+*.log
+*.pid
+allure-results/
+allure-report/
+test-results/
+playwright-report/
+.coverage
+htmlcov/

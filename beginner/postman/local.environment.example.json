@@ -1,0 +1,78 @@
+{
+  "name": "jshERP 本机示例（自行填密码）",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:9999/jshERP-boot",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "username",
+      "value": "jsh",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "enabled": true,
+      "type": "secret"
+    },
+    {
+      "key": "captcha_uuid",
+      "value": "",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "captcha_code",
+      "value": "",
+      "enabled": true,
+      "type": "secret"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "enabled": true,
+      "type": "secret"
+    },
+    {
+      "key": "old_token",
+      "value": "",
+      "enabled": true,
+      "type": "secret"
+    },
+    {
+      "key": "depot_name",
+      "value": "QA_PM_",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "material_keyword",
+      "value": "QA_",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "document_number",
+      "value": "QA_",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "document_type",
+      "value": "入库",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "document_subtype",
+      "value": "采购",
+      "enabled": true,
+      "type": "default"
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

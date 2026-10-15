@@ -1,0 +1,400 @@
+{
+  "info": {
+    "name": "jshERP v3.5 本地手工接口学习",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "仅用于本机ERP手工调试。验证码必须看图人工输入；不要整套Runner连续执行。写请求至少间隔2.1秒，查询不必等待。"
+  },
+  "item": [
+    {
+      "name": "01 获取验证码（Visualize查看图片）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/user/randomImage"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('验证码图像和UUID', () => { pm.expect(body.data.uuid).to.be.a('string').and.not.empty; pm.expect(body.data.base64).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('captcha_uuid', body.data.uuid);",
+              "pm.environment.set('captcha_code', '');",
+              "const image = body.data.base64.startsWith('data:') ? body.data.base64 : 'data:image/png;base64,' + body.data.base64;",
+              "pm.visualizer.set('<p>看图后在环境captcha_code填入四位字符，再发送登录。</p><img src=\"{{image}}\" />', {image});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 登录（先人工填captcha_code）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/user/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"loginName\": \"{{username}}\",\n  \"password\": \"{{password_md5}}\",\n  \"uuid\": \"{{captcha_uuid}}\",\n  \"code\": \"{{captcha_code}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }",
+              "pm.environment.set('token', '');",
+              "if (!pm.environment.get('captcha_uuid') || !pm.environment.get('captcha_code')) { throw new Error('先获取验证码、看图并填写captcha_code'); }",
+              "const CryptoJS = require('crypto-js');",
+              "pm.variables.set('password_md5', CryptoJS.MD5(pm.environment.get('password')).toString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('登录成功且含Token', () => { pm.expect(body.data.msgTip).to.eql('user can login'); pm.expect(body.data.token).to.be.a('string').and.not.empty; });",
+              "if (body.code === 200 && body.data.msgTip === 'user can login' && body.data.token) { pm.environment.set('token', body.data.token); }",
+              "pm.environment.set('captcha_code', '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 查询当前用户",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          }
+        ],
+        "url": "{{base_url}}/user/getUserSession"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('当前登录身份一致', () => pm.expect(body.data.user.loginName).to.eql(pm.environment.get('username')));",
+              "pm.test('不返回密码', () => pm.expect(body.data.user.password == null).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 仓库查询（按depot_name筛选）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          }
+        ],
+        "url": "{{base_url}}/depot/list?currentPage=1&pageSize=20&search=%7B%22name%22%3A%22{{depot_name}}%22%7D"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('仓库列表结构', () => { pm.expect(body.data.rows).to.be.an('array'); pm.expect(body.data.total).to.be.a('number'); });",
+              "pm.test('名称筛选正确', () => body.data.rows.forEach(row => pm.expect(row.name).to.include(pm.environment.get('depot_name'))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 新增测试仓库（人工单次发送）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/depot/add",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{depot_name}}\",\n  \"sort\": \"99\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }",
+              "pm.environment.set('depot_name', 'QA_PM_' + Date.now().toString().slice(-10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('保存成功', () => pm.expect(body.data.message).to.eql('成功'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 库存查询（填material_keyword）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          }
+        ],
+        "url": "{{base_url}}/material/getListWithStock?currentPage=1&pageSize=20&materialParam={{material_keyword}}&zeroStock=0"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('库存列表和汇总数量', () => { pm.expect(body.data.rows).to.be.an('array'); pm.expect(body.data.total).to.be.a('number'); pm.expect(body.data.currentStock).to.be.a('number'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 查询单据列表（填document_number）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          }
+        ],
+        "url": "{{base_url}}/depotHead/list?currentPage=1&pageSize=20&search=%7B%22number%22%3A%22{{document_number}}%22%2C%22type%22%3A%22{{document_type}}%22%2C%22subType%22%3A%22{{document_subtype}}%22%7D"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('业务码200', () => pm.expect(body.code).to.eql(200));",
+              "pm.test('单据列表结构', () => { pm.expect(body.data.rows).to.be.an('array'); pm.expect(body.data.total).to.be.a('number'); });",
+              "pm.test('单号筛选正确', () => body.data.rows.forEach(row => pm.expect(row.number).to.include(pm.environment.get('document_number'))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 退出（固定版本返回业务400/null）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{token}}"
+          }
+        ],
+        "url": "{{base_url}}/user/logout"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP200', () => pm.response.to.have.status(200));",
+              "pm.test('固定版本退出响应', () => pm.expect(pm.response.json()).to.deep.eql({code:400,data:null}));",
+              "pm.environment.set('old_token', pm.environment.get('token'));",
+              "pm.environment.set('token', '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 验证旧Token失效",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Access-Token",
+            "value": "{{old_token}}"
+          }
+        ],
+        "url": "{{base_url}}/user/getUserSession"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get('base_url') !== 'http://127.0.0.1:9999/jshERP-boot') { throw new Error('只允许本项目本地ERP'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('会话失效HTTP500', () => pm.response.to.have.status(500));",
+              "pm.test('会话失效标识', () => pm.expect(pm.response.text()).to.eql('loginOut'));",
+              "pm.environment.set('old_token', '');"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

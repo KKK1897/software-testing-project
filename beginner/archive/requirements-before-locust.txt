@@ -1,0 +1,8 @@
+pytest==8.3.5
+requests==2.32.3
+allure-pytest==2.13.5
+playwright==1.51.0
+pytest-playwright==0.7.0
+PyMySQL==1.1.1
+psutil==7.0.0
+pypdf==5.4.0

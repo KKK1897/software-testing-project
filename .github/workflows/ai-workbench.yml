@@ -1,0 +1,19 @@
+name: Python AI workbench checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install workbench dependencies
+        run: python -m pip install -r requirements-workbench.txt
+      - name: Validate generation, review, exports and model error handling
+        run: python -m unittest discover -s beginner/ai_testing/tests -p 'test_*.py' -v

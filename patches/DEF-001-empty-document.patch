@@ -1,0 +1,11 @@
+--- a/src/main/java/com/jsh/erp/service/depotHead/DepotHeadService.java
++++ b/src/main/java/com/jsh/erp/service/depotHead/DepotHeadService.java
+@@ -892,7 +892,7 @@
+             Map<Long,String> personMap = personService.getPersonMap();
+             Map<Long,String> accountMap = accountService.getAccountMap();
+             List<DepotHeadVo4List> list = depotHeadMapperEx.getDetailByNumber(number);
+-            if (null != list) {
++            if (null != list && !list.isEmpty()) {
+                 List<Long> idList = new ArrayList<>();
+                 List<String> numberList = new ArrayList<>();
+                 for (DepotHeadVo4List dh : list) {

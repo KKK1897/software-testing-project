@@ -1,0 +1,62 @@
+name: Local ERP regression
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  windows-erp:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.1'
+      - name: Build pinned ERP and initialize isolated local environment
+        run: |
+          python scripts/bootstrap.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: API and real Chromium regression
+        run: |
+          .venv/Scripts/python.exe -m pytest tests -p no:cacheprovider --alluredir=artifacts/allure-baseline-full --junitxml=artifacts/baseline-full-junit.xml
+          exit $LASTEXITCODE
+      - name: Generate Allure even when tests fail
+        if: always()
+        run: |
+          if (Test-Path tools/allure-2.32.0/bin/allure.bat) {
+            $env:JAVA_HOME="$pwd/tools/jdk8u472-b08"
+            & tools/allure-2.32.0/bin/allure.bat generate artifacts/allure-baseline-full -o artifacts/allure-baseline-report --clean
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Stop only project processes
+        if: always()
+        run: |
+          if (Test-Path .venv/Scripts/python.exe) {
+            .venv/Scripts/python.exe scripts/stop_local.py
+            exit $LASTEXITCODE
+          }
+      - name: Sanitize diagnostic copies
+        if: always()
+        run: |
+          if (Test-Path .venv/Scripts/python.exe) {
+            .venv/Scripts/python.exe scripts/export_diagnostics.py
+            exit $LASTEXITCODE
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: erp-sanitized-diagnostics
+          path: artifacts/shareable
+          if-no-files-found: warn
+          retention-days: 14
